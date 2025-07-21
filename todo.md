@@ -2,19 +2,20 @@
 
 ### ✅ Epic: Cloud Governance & Compliance Platform
 
-#### 🔧 Task: Set up policy engine (OPA) and integrate with cloud resource scanner
+#### ✅ Task: Set up policy engine (OPA) and integrate with cloud resource scanner - **COMPLETED**
 - **Subtasks:**
   - [x] Install OPA in a containerized service ✅ (docker-compose.yml)
   - [x] Write example Rego policy: "S3 buckets must be encrypted" ✅ (policies/aws_s3_encryption.rego)
-  - [ ] Connect to AWS Config to retrieve resource inventory 🔨 (architecture ready)
-  - [ ] Connect to Azure Policy and GCP Asset Inventory 🔨 (framework implemented)
+  - [x] Connect to AWS Config to retrieve resource inventory ✅ (aws_client.py)
+  - [x] Connect to Azure Policy and GCP Asset Inventory ✅ (azure_client.py, gcp_client.py)
   - [x] Normalize resources into a common schema for OPA ✅ (models.py)
   - [x] Return policy pass/fail results via API ✅ (FastAPI /evaluate endpoint)
 - **Acceptance Criteria:**
-  - Test run of policy evaluation returns results for at least 20 resources
-  - Results show pass/fail + suggested remediation
-- **Status:** 🔨 **IN PROGRESS** - Core OPA engine implemented, cloud integrations next
-- **Branch:** `feature/opa-policy-engine` | **Commit:** `68c591a`
+  - ✅ Test run of policy evaluation returns results for at least 20 resources
+  - ✅ Results show pass/fail + suggested remediation
+- **Status:** ✅ **COMPLETED** - PR #7 ready for merge
+- **Branch:** `feature/opa-policy-engine` | **PR:** [#7](https://github.com/cristian-ravl/fintech-cloud-suite/pull/7)
+- **GitHub Project:** [FinTech Cloud Suite Development](https://github.com/users/cristian-ravl/projects/2)
 
 #### 🔧 Task: Build compliance dashboard with policy results
 - **Subtasks:**
