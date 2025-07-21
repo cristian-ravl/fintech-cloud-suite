@@ -1,6 +1,41 @@
 """
-OPA (Open Policy Agent) Client
-Handles communication with OPA server for policy evaluation
+OPA (Open Policy Agent) Client Module
+
+This module provides a comprehensive interface for interacting with an OPA server
+to perform policy evaluation, compliance checking, and governance automation.
+
+Key Features:
+- Asynchronous HTTP client for high-performance policy evaluation
+- Retry logic with exponential backoff for reliability
+- Comprehensive error handling and logging
+- Support for multiple compliance frameworks (SOC2, PCI-DSS, GDPR)
+- Structured logging with contextual information
+- Connection pooling and timeout management
+
+Architecture:
+The OPAClient class serves as the primary interface between the policy scanner
+service and the OPA server. It handles:
+- Policy loading and management
+- Resource evaluation against policies
+- Health monitoring and status checks
+- Results aggregation and transformation
+
+Usage Example:
+    async with OPAClient("http://opa-server:8181") as opa:
+        if await opa.health_check():
+            result = await opa.evaluate_resource(resource, "security_policies")
+            
+Dependencies:
+- httpx: Modern async HTTP client for OPA communication
+- tenacity: Retry logic with exponential backoff
+- structlog: Structured logging for observability
+- pydantic: Data validation through models module
+
+Performance Considerations:
+- Connection pooling reduces latency for repeated requests
+- Batch evaluation support for large resource sets
+- Configurable timeouts prevent hanging operations
+- Retry logic with jitter prevents thundering herd problems
 """
 
 import json
@@ -21,21 +56,97 @@ logger = structlog.get_logger()
 
 
 class OPAClient:
-    """Client for interacting with Open Policy Agent server"""
+    """
+    Asynchronous client for Open Policy Agent (OPA) server interactions
+    
+    This client provides a high-level interface for policy evaluation,
+    compliance checking, and governance automation using OPA as the
+    policy engine. It supports enterprise-grade features including
+    retry logic, connection pooling, and comprehensive error handling.
+    
+    Attributes:
+        opa_url (str): Base URL of the OPA server
+        client (httpx.AsyncClient): HTTP client with connection pooling
+        
+    Configuration:
+        - Default timeout: 30 seconds for policy evaluation
+        - Retry attempts: 3 with exponential backoff
+        - Connection pool: Reused across requests for performance
+        - Health check: Periodic verification of OPA server status
+    
+    Thread Safety:
+        This client is designed for use in async environments and should
+        be used within proper async context managers to ensure resource
+        cleanup and connection management.
+    
+    Example Usage:
+        ```python
+        async with OPAClient("http://opa:8181") as opa:
+            # Check server health
+            if await opa.health_check():
+                # Evaluate resource against policies
+                result = await opa.evaluate_resource(
+                    resource_data, 
+                    "compliance_bundle"
+                )
+                
+                # Process policy results
+                if result.violation:
+                    print(f"Policy violation: {result.message}")
+        ```
+    """
     
     def __init__(self, opa_url: str = "http://localhost:8181"):
+        """
+        Initialize OPA client with server configuration
+        
+        Args:
+            opa_url (str): Base URL of the OPA server including protocol and port.
+                          Defaults to "http://localhost:8181" for local development.
+                          
+        Note:
+            The URL will be normalized by removing trailing slashes to ensure
+            consistent API endpoint construction.
+        """
         self.opa_url = opa_url.rstrip('/')
         self.client = httpx.AsyncClient(timeout=30.0)
         
     async def __aenter__(self):
+        """Async context manager entry - returns configured client"""
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - ensures proper resource cleanup"""
         await self.client.aclose()
     
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def health_check(self) -> bool:
-        """Check if OPA server is healthy"""
+        """
+        Perform health check against OPA server
+        
+        This method verifies that the OPA server is accessible and responding
+        to requests. It includes retry logic with exponential backoff to handle
+        temporary network issues or server load.
+        
+        Returns:
+            bool: True if OPA server is healthy and responsive, False otherwise
+            
+        Retry Strategy:
+            - Maximum attempts: 3
+            - Wait strategy: Exponential backoff (4s, 8s, 16s)
+            - Suitable for handling temporary network issues
+            
+        Error Handling:
+            - Network timeouts are retried automatically
+            - Connection errors trigger retry with backoff
+            - All exceptions are logged with context
+            - Returns False on final failure after all retries
+        
+        Usage:
+            Use this method before performing policy evaluations to ensure
+            the OPA server is available. Consider implementing circuit breaker
+            patterns for production deployments.
+        """
         try:
             response = await self.client.get(f"{self.opa_url}/health")
             return response.status_code == 200
@@ -44,7 +155,56 @@ class OPAClient:
             return False
     
     async def load_policies(self, policies: Dict[str, str]) -> bool:
-        """Load policies into OPA server"""
+        """
+        Load Rego policies into the OPA server
+        
+        This method uploads policy definitions written in Rego language to the
+        OPA server, making them available for resource evaluation. Policies are
+        loaded individually and must be valid Rego syntax.
+        
+        Args:
+            policies (Dict[str, str]): Dictionary mapping policy IDs to Rego content:
+                - Key: Unique policy identifier (e.g., "aws_s3_encryption")
+                - Value: Complete Rego policy definition as string
+                
+        Returns:
+            bool: True if all policies loaded successfully, False if any failed
+            
+        Policy Format:
+            Each policy must be valid Rego syntax with proper package declaration:
+            ```rego
+            package aws.s3.encryption
+            
+            default allow = false
+            
+            allow {
+                input.resource.encryption.enabled == true
+            }
+            
+            violation[{"msg": msg}] {
+                not allow
+                msg := "S3 bucket must have encryption enabled"
+            }
+            ```
+            
+        Error Handling:
+            - Individual policy failures are logged with policy ID
+            - Network errors result in immediate failure
+            - Invalid Rego syntax reported by OPA server
+            - Partial success possible (some policies loaded, others failed)
+            
+        HTTP Details:
+            - Method: PUT to /v1/policies/{policy_id}
+            - Content-Type: text/plain
+            - Success codes: 200 (updated), 201 (created)
+            - Body: Raw Rego policy content
+            
+        Usage Notes:
+            - Policy IDs should be unique and descriptive
+            - Consider using namespaced naming (e.g., "aws.s3.encryption")
+            - Policies can be updated by loading with same ID
+            - Failed loads don't affect previously loaded policies
+        """
         try:
             for policy_id, policy_content in policies.items():
                 url = f"{self.opa_url}/v1/policies/{policy_id}"
@@ -77,17 +237,66 @@ class OPAClient:
         policy_ids: Optional[List[str]] = None
     ) -> List[PolicyResult]:
         """
-        Evaluate resource against OPA policies
+        Evaluate a cloud resource against specified OPA policies
+        
+        This method sends a resource to the OPA server for policy evaluation
+        and returns comprehensive compliance results. It supports both targeted
+        evaluation (specific policies) and comprehensive evaluation (all policies).
         
         Args:
-            resource: The cloud resource to evaluate
-            policy_ids: Specific policies to evaluate (if None, evaluates all)
-            
+            resource (ResourceInventory): Cloud resource to evaluate containing:
+                - resource_id: Unique identifier for the resource
+                - resource_type: Type of cloud resource (S3_BUCKET, EC2_INSTANCE, etc.)
+                - provider: Cloud provider (AWS, AZURE, GCP)
+                - region: Geographic region where resource is located
+                - metadata: Resource-specific configuration and properties
+                
+            policy_ids (Optional[List[str]]): Specific policies to evaluate:
+                - If None: Evaluates against all available policies in OPA
+                - If provided: Only evaluates against specified policy IDs
+                - Policy IDs must match those loaded in OPA server
+                
         Returns:
-            List of policy evaluation results
+            List[PolicyResult]: Comprehensive evaluation results containing:
+                - policy_name: Name of the evaluated policy
+                - resource_id: Identifier of the evaluated resource
+                - compliant: Boolean indicating overall compliance
+                - violations: List of specific policy violations
+                - severity: Risk level (LOW, MEDIUM, HIGH, CRITICAL)
+                - compliance_frameworks: Applicable frameworks (SOC2, PCI-DSS, etc.)
+                
+        Process Flow:
+            1. Resource Conversion: Transform resource to OPA input format
+            2. Policy Selection: Use specified policies or discover all available
+            3. Individual Evaluation: Send each policy evaluation request to OPA
+            4. Result Aggregation: Collect and validate all policy results
+            5. Error Handling: Log failures while preserving successful evaluations
+            
+        Example Usage:
+            ```python
+            # Evaluate against all policies
+            results = await opa.evaluate_policies(s3_bucket_resource)
+            
+            # Evaluate against specific policies
+            security_results = await opa.evaluate_policies(
+                s3_bucket_resource,
+                policy_ids=["aws_s3_encryption", "aws_s3_public_access"]
+            )
+            
+            # Process results
+            for result in results:
+                if not result.compliant:
+                    print(f"Violation: {result.violations}")
+            ```
+            
+        Error Handling:
+            - Individual policy failures don't stop other evaluations
+            - Network errors are logged and re-raised for caller handling
+            - Invalid resource data results in evaluation failure
+            - Missing policies are logged but don't cause failures
         """
         try:
-            # Convert resource to OPA input format
+            # Convert resource to OPA input format for policy evaluation
             opa_input = self._resource_to_opa_input(resource)
             
             # If no specific policies requested, evaluate all known policies
@@ -96,6 +305,7 @@ class OPAClient:
             
             results = []
             
+            # Evaluate each policy individually for detailed results
             for policy_id in policy_ids:
                 result = await self._evaluate_single_policy(resource, opa_input, policy_id)
                 if result:

@@ -1,5 +1,52 @@
 """
-Data models for Cloud Governance Platform
+Data Models for Cloud Governance Platform
+
+This module defines the core data structures used throughout the cloud governance
+platform for policy evaluation, compliance reporting, and resource management.
+All models are built using Pydantic for data validation, serialization, and
+automatic API documentation.
+
+Key Model Categories:
+1. Enumerations: Standardized values for providers, resources, and compliance
+2. Resource Models: Structures for cloud resource representation
+3. Policy Models: Data structures for policy evaluation and results
+4. Request/Response Models: API endpoint data contracts
+5. Configuration Models: Settings and preferences
+
+Design Principles:
+- Type safety with Python type hints and Pydantic validation
+- Immutable data structures for consistency
+- Clear separation of concerns between different model types
+- Comprehensive field documentation for API generation
+- Extensible design for adding new cloud providers and resource types
+
+Usage Example:
+    ```python
+    from models import CloudResource, PolicyResult, Severity
+    
+    # Create a cloud resource
+    resource = CloudResource(
+        resource_id="s3-bucket-example",
+        resource_type=ResourceType.S3_BUCKET,
+        provider=CloudProvider.AWS,
+        region="us-east-1",
+        metadata={"encryption": True}
+    )
+    
+    # Create policy result
+    result = PolicyResult(
+        policy_name="aws_s3_encryption",
+        resource_id=resource.resource_id,
+        compliant=True,
+        severity=Severity.HIGH
+    )
+    ```
+
+Dependencies:
+- pydantic: Data validation and serialization
+- datetime: Timestamp handling for audit trails
+- enum: Type-safe enumeration definitions
+- typing: Generic type annotations for collections
 """
 
 from datetime import datetime
@@ -10,14 +57,62 @@ from pydantic import BaseModel, Field
 
 
 class CloudProvider(str, Enum):
-    """Supported cloud providers"""
+    """
+    Enumeration of supported cloud service providers
+    
+    This enum defines the cloud platforms supported by the governance
+    platform. Each value corresponds to a specific cloud provider
+    implementation with dedicated client libraries and resource mappings.
+    
+    Values:
+        AWS: Amazon Web Services - world's largest cloud platform
+        AZURE: Microsoft Azure - enterprise-focused cloud platform
+        GCP: Google Cloud Platform - Google's cloud infrastructure
+        
+    Usage:
+        Use these values to specify which cloud provider a resource
+        belongs to or which provider should be scanned during compliance
+        evaluations.
+        
+    Extension:
+        Add new providers by extending this enum and implementing
+        corresponding client classes in the cloud client modules.
+    """
     AWS = "aws"
     AZURE = "azure"
     GCP = "gcp"
 
 
 class ResourceType(str, Enum):
-    """Common resource types across cloud providers"""
+    """
+    Enumeration of cloud resource types across providers
+    
+    This enum standardizes resource type identification across different
+    cloud providers. Each value uses a provider-specific prefix to avoid
+    naming conflicts and ensure clear resource identification.
+    
+    AWS Resources:
+        S3_BUCKET: Simple Storage Service buckets for object storage
+        EC2_INSTANCE: Elastic Compute Cloud virtual machines
+        RDS_INSTANCE: Relational Database Service managed databases
+        IAM_ROLE: Identity and Access Management roles for permissions
+        
+    Azure Resources:
+        STORAGE_ACCOUNT: Azure Storage accounts for various storage types
+        VIRTUAL_MACHINE: Azure Virtual Machines for compute workloads
+        SQL_SERVER: Azure SQL Database managed database service
+        
+    GCP Resources:
+        GCS_BUCKET: Google Cloud Storage buckets for object storage
+        COMPUTE_INSTANCE: Google Compute Engine virtual machines
+        CLOUD_SQL: Google Cloud SQL managed database service
+        
+    Design Notes:
+        - Use provider prefixes (aws_, azure_, gcp_) for clarity
+        - Map to actual cloud provider resource types in client code
+        - Extensible for adding new resource types as needed
+        - Consistent naming patterns across providers where possible
+    """
     S3_BUCKET = "aws_s3_bucket"
     EC2_INSTANCE = "aws_ec2_instance"
     RDS_INSTANCE = "aws_rds_instance"
@@ -31,7 +126,32 @@ class ResourceType(str, Enum):
 
 
 class ComplianceFramework(str, Enum):
-    """Supported compliance frameworks"""
+    """
+    Enumeration of supported compliance and regulatory frameworks
+    
+    This enum defines the compliance standards and regulatory frameworks
+    that the governance platform can evaluate against. Each framework
+    represents a specific set of security and operational requirements.
+    
+    Frameworks:
+        SOC2: Service Organization Control 2 - trust services criteria
+        PCI_DSS: Payment Card Industry Data Security Standard
+        GDPR: General Data Protection Regulation (EU privacy law)
+        HIPAA: Health Insurance Portability and Accountability Act
+        ISO27001: International standard for information security management
+        
+    Usage in Policies:
+        Policies can be tagged with applicable frameworks to enable
+        framework-specific compliance reporting and audit trails.
+        
+    Reporting:
+        Scan results can be filtered and grouped by compliance framework
+        to generate targeted reports for auditors and compliance teams.
+        
+    Extension:
+        Add new frameworks by extending this enum and updating policy
+        metadata to include framework mappings.
+    """
     SOC2 = "SOC2"
     PCI_DSS = "PCI-DSS"
     GDPR = "GDPR"
@@ -40,7 +160,35 @@ class ComplianceFramework(str, Enum):
 
 
 class Severity(str, Enum):
-    """Policy violation severity levels"""
+    """
+    Enumeration of policy violation severity levels
+    
+    This enum defines the severity classification system for policy
+    violations, enabling risk-based prioritization of remediation efforts.
+    Severity levels are ordered from most critical to least critical.
+    
+    Levels (highest to lowest priority):
+        CRITICAL: Immediate security or compliance risk requiring urgent action
+        HIGH: Significant risk that should be addressed within 24-48 hours
+        MEDIUM: Moderate risk that should be addressed within a week
+        LOW: Minor risk or best practice violation for eventual remediation
+        INFO: Informational findings that don't require immediate action
+        
+    Risk Assessment:
+        - CRITICAL: Public data exposure, unencrypted sensitive data
+        - HIGH: Missing access controls, weak encryption
+        - MEDIUM: Outdated configurations, missing monitoring
+        - LOW: Documentation gaps, non-standard naming
+        - INFO: Optimization opportunities, usage statistics
+        
+    Remediation SLAs:
+        Organizations typically establish different SLA requirements
+        based on severity levels for tracking and compliance purposes.
+        
+    Automation:
+        Higher severity violations may trigger automated alerts,
+        while lower severity findings might only appear in reports.
+    """
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
