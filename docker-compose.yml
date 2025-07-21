@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  opa:
+    image: openpolicyagent/opa:latest-envoy
+    container_name: fintech-opa
+    ports:
+      - "8181:8181"
+    command: 
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "--log-level=debug"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:ro
+      - ./data:/data:ro
+    networks:
+      - fintech-network
+
+  policy-scanner:
+    build:
+      context: ./cloud-governance
+      dockerfile: Dockerfile
+    container_name: fintech-policy-scanner
+    environment:
+      - OPA_URL=http://opa:8181
+      - AWS_REGION=us-east-1
+      - LOG_LEVEL=info
+    depends_on:
+      - opa
+    networks:
+      - fintech-network
+    volumes:
+      - ~/.aws:/root/.aws:ro  # For AWS credentials (development)
+
+networks:
+  fintech-network:
+    driver: bridge
