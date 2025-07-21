@@ -24,3 +24,10 @@ tenacity==8.5.0
 pytest==8.2.2
 pytest-asyncio==0.23.7
 pytest-mock==3.14.0
+
+# Security and monitoring
+pip-audit>=2.6.0
+prometheus-client>=0.17.0
+
+# Additional FastAPI utilities
+python-multipart>=0.0.6

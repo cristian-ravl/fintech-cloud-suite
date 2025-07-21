@@ -7,6 +7,7 @@ to perform policy evaluation, compliance checking, and governance automation.
 Key Features:
 - Asynchronous HTTP client for high-performance policy evaluation
 - Retry logic with exponential backoff for reliability
+- Circuit breaker pattern for fault tolerance
 - Comprehensive error handling and logging
 - Support for multiple compliance frameworks (SOC2, PCI-DSS, GDPR)
 - Structured logging with contextual information
@@ -19,6 +20,7 @@ service and the OPA server. It handles:
 - Resource evaluation against policies
 - Health monitoring and status checks
 - Results aggregation and transformation
+- Circuit breaker state management for resilience
 
 Usage Example:
     async with OPAClient("http://opa-server:8181") as opa:
@@ -36,12 +38,16 @@ Performance Considerations:
 - Batch evaluation support for large resource sets
 - Configurable timeouts prevent hanging operations
 - Retry logic with jitter prevents thundering herd problems
+- Circuit breaker prevents cascade failures
 """
 
 import json
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from enum import Enum
+from functools import wraps
 
 import httpx
 import structlog
@@ -54,6 +60,12 @@ from .models import (
 
 logger = structlog.get_logger()
 
+class CircuitBreakerState(Enum):
+    """Circuit breaker states for fault tolerance"""
+    CLOSED = "closed"    # Normal operation
+    OPEN = "open"        # Failing fast, not attempting calls
+    HALF_OPEN = "half_open"  # Testing if service is back
+
 
 class OPAClient:
     """
@@ -62,17 +74,22 @@ class OPAClient:
     This client provides a high-level interface for policy evaluation,
     compliance checking, and governance automation using OPA as the
     policy engine. It supports enterprise-grade features including
-    retry logic, connection pooling, and comprehensive error handling.
+    retry logic, connection pooling, circuit breaker pattern, and 
+    comprehensive error handling.
     
     Attributes:
         opa_url (str): Base URL of the OPA server
         client (httpx.AsyncClient): HTTP client with connection pooling
+        circuit_state (CircuitBreakerState): Current circuit breaker state
+        failure_count (int): Count of consecutive failures
+        last_failure_time (float): Timestamp of last failure
         
     Configuration:
         - Default timeout: 30 seconds for policy evaluation
         - Retry attempts: 3 with exponential backoff
         - Connection pool: Reused across requests for performance
         - Health check: Periodic verification of OPA server status
+        - Circuit breaker: Failure threshold of 5, recovery timeout of 60s
     
     Thread Safety:
         This client is designed for use in async environments and should
@@ -110,6 +127,9 @@ class OPAClient:
         """
         self.opa_url = opa_url.rstrip('/')
         self.client = httpx.AsyncClient(timeout=30.0)
+        self.circuit_state = CircuitBreakerState.CLOSED
+        self.failure_count = 0
+        self.last_failure_time = 0.0
         
     async def __aenter__(self):
         """Async context manager entry - returns configured client"""

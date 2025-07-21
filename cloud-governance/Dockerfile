@@ -1,6 +1,30 @@
 # Cloud Governance Policy Scanner - Production Container
 # 
-# This Dockerfile creates a secure, optimized container for running the
+# This Dockerfile EXPOSE 8000
+
+# Container Metadata:
+# - Maintainer information for support and contact
+# - Version tracking for deployment management
+# - Description for container registry documentation
+LABEL maintainer="cristian@ravl.ai" \
+      version="1.0.0" \
+      description="Cloud Governance Policy Scanner with OPA Integration"
+
+# Health Check Configuration:
+# - Monitors application health via HTTP endpoint
+# - 30-second intervals for regular health monitoring
+# - 10-second timeout prevents hanging checks
+# - 60-second startup period allows application initialization
+# - 3 retries before marking container as unhealthy
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)" || exit 1
+
+# Application Startup:
+# - Execute main module using Python module syntax
+# - Enables proper module resolution and imports
+# - Starts FastAPI server with uvicorn
+# - Configured for production deployment with proper logging
+CMD ["python", "-m", "src.main"]a secure, optimized container for running the
 # cloud governance policy scanner service. It implements security best
 # practices including non-root user execution, minimal attack surface,
 # and comprehensive health monitoring.

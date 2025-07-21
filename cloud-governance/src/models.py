@@ -283,9 +283,54 @@ class OPAPolicyInput(BaseModel):
 
 
 class ScanRequest(BaseModel):
-    """Request model for resource scanning"""
-    cloud_providers: List[CloudProvider] = Field(default_factory=lambda: list(CloudProvider))
-    resource_types: List[ResourceType] = Field(default_factory=list)
-    regions: List[str] = Field(default_factory=list)
-    account_ids: List[str] = Field(default_factory=list)
-    tag_filters: Dict[str, str] = Field(default_factory=dict)
+    """Request model for resource scanning with API versioning support.
+    
+    This model defines the structure for requesting cloud resource scans
+    across multiple providers. Includes API versioning for future compatibility
+    and comprehensive filtering options.
+    
+    Attributes:
+        cloud_providers: List of cloud providers to scan (defaults to all)
+        resource_types: Specific resource types to include in scan
+        regions: Geographic regions to limit scanning scope
+        account_ids: Specific cloud account identifiers to scan
+        tag_filters: Key-value pairs for resource tag-based filtering
+        api_version: API version for request compatibility and evolution
+    """
+    cloud_providers: List[CloudProvider] = Field(
+        default_factory=lambda: list(CloudProvider),
+        description="Cloud providers to scan for resources"
+    )
+    resource_types: List[ResourceType] = Field(
+        default_factory=list,
+        description="Specific resource types to include (empty = all types)"
+    )
+    regions: List[str] = Field(
+        default_factory=list,
+        description="Geographic regions to scan (empty = all regions)"
+    )
+    account_ids: List[str] = Field(
+        default_factory=list,
+        description="Cloud account IDs to scan (empty = all accessible accounts)"
+    )
+    tag_filters: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Resource tag filters as key-value pairs"
+    )
+    api_version: str = Field(
+        default="v1",
+        description="API version for request compatibility and schema evolution"
+    )
+    
+    class Config:
+        """Pydantic configuration with comprehensive example"""
+        schema_extra = {
+            "example": {
+                "cloud_providers": ["aws", "azure"],
+                "resource_types": ["aws_s3_bucket", "azure_storage_account"],
+                "regions": ["us-east-1", "eastus"],
+                "account_ids": ["123456789012"],
+                "tag_filters": {"Environment": "production", "Team": "security"},
+                "api_version": "v1"
+            }
+        }
