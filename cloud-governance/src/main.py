@@ -42,7 +42,7 @@ import os
 import logging
 import asyncio
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -818,6 +818,269 @@ async def root():
             "policies": "/policies"
         }
     }
+
+
+@app.get("/dashboard/metrics")
+async def get_dashboard_metrics(
+    provider: Optional[str] = Query(None, description="Filter by cloud provider"),
+    framework: Optional[str] = Query(None, description="Filter by compliance framework")
+):
+    """
+    Get comprehensive dashboard metrics for compliance overview
+    
+    This endpoint provides aggregate metrics and statistics for the
+    compliance dashboard, including resource counts, violation summaries,
+    and compliance trends over time.
+    
+    Args:
+        provider: Optional cloud provider filter ("AWS", "AZURE", "GCP")
+        framework: Optional compliance framework filter ("SOC2", "PCI_DSS", "GDPR")
+    
+    Returns:
+        dict: Dashboard metrics including:
+            - compliance_score: Overall compliance percentage (0-100)
+            - total_resources: Total number of scanned resources
+            - violations_by_severity: Breakdown of violations by severity level
+            - violations_by_provider: Violations grouped by cloud provider
+            - compliance_trend: Historical compliance data points
+    """
+    try:
+        # Simulate dashboard metrics (replace with actual database queries)
+        import random
+        from datetime import datetime, timedelta
+        
+        # Generate sample compliance trend data
+        trend_data = []
+        for i in range(30):  # Last 30 days
+            date = datetime.now() - timedelta(days=i)
+            trend_data.append({
+                "date": date.isoformat(),
+                "compliance_score": random.randint(75, 95),
+                "violations_count": random.randint(10, 50)
+            })
+        
+        metrics = {
+            "compliance_score": random.randint(80, 95),
+            "total_resources": random.randint(1000, 5000),
+            "compliant_resources": random.randint(800, 4500),
+            "violations_by_severity": {
+                "CRITICAL": random.randint(0, 10),
+                "HIGH": random.randint(5, 25),
+                "MEDIUM": random.randint(10, 50),
+                "LOW": random.randint(15, 75)
+            },
+            "violations_by_provider": {
+                "AWS": random.randint(10, 50),
+                "AZURE": random.randint(5, 30),
+                "GCP": random.randint(2, 20)
+            },
+            "compliance_trend": trend_data[:7]  # Last 7 days for chart
+        }
+        
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Failed to get dashboard metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve dashboard metrics")
+
+
+@app.get("/violations")
+async def get_violations(
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(50, ge=1, le=100, description="Number of violations per page"),
+    severity: Optional[str] = Query(None, description="Filter by severity"),
+    provider: Optional[str] = Query(None, description="Filter by cloud provider"),
+    status: Optional[str] = Query(None, description="Filter by violation status"),
+    sort_by: str = Query("detected_at", description="Sort field"),
+    sort_order: str = Query("desc", description="Sort order (asc/desc)")
+):
+    """
+    Get paginated list of policy violations with filtering and sorting
+    
+    This endpoint returns a paginated list of policy violations found during
+    compliance scans, with support for filtering, sorting, and detailed
+    violation information for dashboard display.
+    
+    Args:
+        page: Page number for pagination (1-based)
+        page_size: Number of violations to return per page (1-100)
+        severity: Filter by severity level ("CRITICAL", "HIGH", "MEDIUM", "LOW")
+        provider: Filter by cloud provider ("AWS", "AZURE", "GCP")
+        status: Filter by violation status ("OPEN", "IN_PROGRESS", "RESOLVED", "ACCEPTED")
+        sort_by: Field to sort by ("detected_at", "severity", "policy_name")
+        sort_order: Sort direction ("asc" or "desc")
+    
+    Returns:
+        dict: Paginated violations response:
+            - violations: List of violation objects with full details
+            - total_count: Total number of matching violations
+            - page: Current page number
+            - page_size: Violations per page
+            - total_pages: Total number of pages
+    """
+    try:
+        # Generate sample violation data (replace with database queries)
+        import random
+        from datetime import datetime, timedelta
+        
+        # Sample data for demonstration
+        sample_violations = []
+        severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        providers = ["AWS", "AZURE", "GCP"]
+        statuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "ACCEPTED"]
+        policies = [
+            "aws_s3_encryption", "azure_storage_encryption", "gcp_compute_firewall",
+            "aws_iam_least_privilege", "azure_network_security", "gcp_storage_access"
+        ]
+        
+        for i in range(100):  # Generate 100 sample violations
+            violation = {
+                "violation_id": f"violation_{i:04d}",
+                "policy_name": random.choice(policies),
+                "resource": {
+                    "id": f"resource_{i:04d}",
+                    "name": f"example-resource-{i:04d}",
+                    "type": "S3_BUCKET",
+                    "provider": random.choice(providers),
+                    "region": random.choice(["us-east-1", "us-west-2", "eu-west-1"]),
+                    "account_id": "123456789012",
+                    "tags": {"Environment": "production", "Team": "security"}
+                },
+                "severity": random.choice(severities),
+                "description": "Resource does not meet compliance policy requirements",
+                "remediation": "Apply the recommended security configuration",
+                "frameworks": [
+                    {
+                        "id": "SOC2",
+                        "name": "SOC 2 Type II",
+                        "control_id": "CC6.1",
+                        "control_description": "Logical and physical access controls"
+                    }
+                ],
+                "detected_at": (datetime.now() - timedelta(days=random.randint(0, 30))).isoformat(),
+                "status": random.choice(statuses)
+            }
+            sample_violations.append(violation)
+        
+        # Apply filters
+        filtered_violations = sample_violations
+        if severity:
+            filtered_violations = [v for v in filtered_violations if v["severity"] == severity]
+        if provider:
+            filtered_violations = [v for v in filtered_violations if v["resource"]["provider"] == provider]
+        if status:
+            filtered_violations = [v for v in filtered_violations if v["status"] == status]
+        
+        # Apply sorting
+        reverse = sort_order.lower() == "desc"
+        if sort_by == "detected_at":
+            filtered_violations.sort(key=lambda x: x["detected_at"], reverse=reverse)
+        elif sort_by == "severity":
+            severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+            filtered_violations.sort(key=lambda x: severity_order.get(x["severity"], 0), reverse=reverse)
+        
+        # Apply pagination
+        total_count = len(filtered_violations)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_violations = filtered_violations[start_idx:end_idx]
+        
+        return {
+            "violations": paginated_violations,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get violations: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve violations")
+
+
+@app.patch("/violations/{violation_id}/status")
+async def update_violation_status(
+    violation_id: str,
+    status_update: dict = Body(..., example={"status": "RESOLVED", "notes": "Fixed configuration"})
+):
+    """
+    Update the status of a specific policy violation
+    
+    This endpoint allows updating the remediation status of policy violations,
+    enabling teams to track progress on compliance issues and maintain
+    an audit trail of remediation activities.
+    
+    Args:
+        violation_id: Unique identifier for the policy violation
+        status_update: Status update information:
+            - status: New status ("IN_PROGRESS", "RESOLVED", "ACCEPTED")
+            - notes: Optional notes about the status change
+    
+    Returns:
+        dict: Updated violation status confirmation
+    """
+    try:
+        # In a real implementation, this would update the database
+        logger.info(f"Updated violation {violation_id} status to {status_update.get('status')}")
+        
+        return {
+            "violation_id": violation_id,
+            "status": status_update.get("status"),
+            "updated_at": asyncio.get_event_loop().time(),
+            "message": "Violation status updated successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to update violation status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update violation status")
+
+
+@app.get("/dashboard/trend")
+async def get_compliance_trend(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    provider: Optional[str] = Query(None, description="Filter by cloud provider"),
+    framework: Optional[str] = Query(None, description="Filter by compliance framework")
+):
+    """
+    Get historical compliance trend data for dashboard charts
+    
+    This endpoint provides time-series data for compliance metrics,
+    enabling trend analysis and historical compliance reporting.
+    
+    Args:
+        start_date: Start date for trend analysis (YYYY-MM-DD format)
+        end_date: End date for trend analysis (YYYY-MM-DD format)
+        provider: Optional cloud provider filter
+        framework: Optional compliance framework filter
+    
+    Returns:
+        list: Time-series compliance data points
+    """
+    try:
+        from datetime import datetime, timedelta
+        import random
+        
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        
+        trend_data = []
+        current_date = start
+        
+        while current_date <= end:
+            trend_data.append({
+                "date": current_date.isoformat(),
+                "compliance_score": random.randint(75, 95),
+                "violations_count": random.randint(10, 50),
+                "scanned_resources": random.randint(1000, 2000)
+            })
+            current_date += timedelta(days=1)
+        
+        return trend_data
+        
+    except Exception as e:
+        logger.error(f"Failed to get compliance trend: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve compliance trend")
 
 
 if __name__ == "__main__":

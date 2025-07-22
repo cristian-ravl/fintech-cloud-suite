@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Styles for FinTech Cloud Compliance Dashboard */
+
+:root {
+  --color-primary: #2563eb;
+  --color-secondary: #64748b;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-critical: #991b1b;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Loading animation */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Chart container responsiveness */
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+/* Custom severity badges */
+.severity-critical {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.severity-high {
+  @apply bg-orange-100 text-orange-800 border-orange-200;
+}
+
+.severity-medium {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.severity-low {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+/* Status badges */
+.status-open {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.status-in-progress {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+.status-resolved {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.status-accepted {
+  @apply bg-gray-100 text-gray-800 border-gray-200;
+}
+
+/* Table enhancements */
+.table-fixed {
+  table-layout: fixed;
+}
+
+.table-cell-ellipsis {
+  @apply truncate max-w-0;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-1;
+}
+
+/* Focus states for accessibility */
+.focus-ring {
+  @apply focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none;
+}
+
+/* Custom animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-before: always;
+  }
+}
+
+/* Dark mode support (for future enhancement) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    --color-primary: #3b82f6;
+    --color-secondary: #94a3b8;
+  }
+}
