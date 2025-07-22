@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  opa:
+    image: openpolicyagent/opa:latest-envoy
+    container_name: fintech-opa
+    restart: unless-stopped
+    ports:
+      - "8181:8181"
+    command: 
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "--log-level=debug"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:ro
+      - ./data:/data:ro
+      - opa_data:/opa_data  # Persist OPA runtime data
+    networks:
+      - fintech-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  policy-scanner:
+    build:
+      context: ./cloud-governance
+      dockerfile: Dockerfile
+    container_name: fintech-policy-scanner
+    restart: unless-stopped
+    environment:
+      - OPA_URL=http://opa:8181
+      - AWS_REGION=us-east-1
+      - LOG_LEVEL=info
+    depends_on:
+      opa:
+        condition: service_healthy
+    networks:
+      - fintech-network
+    volumes:
+      - ~/.aws:/root/.aws:ro  # For AWS credentials (development)
+    ports:
+      - "8000:8000"  # Expose the API endpoint
+
+volumes:
+  opa_data:
+    driver: local
+
+networks:
+  fintech-network:
+    driver: bridge
