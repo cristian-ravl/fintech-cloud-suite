@@ -33,7 +33,7 @@ steps:
 
       cat mergerequest-review.md | friendly-cicd-helper gitlab-comment --project $_GITLAB_PROJECT --mergerequest $$(cat /workspace/gitlab_merge_request_iid)
     secretEnv: ['GITLAB_TOKEN']
-    
+
   - id: Using Vertex AI to provide automated Release Notes
     name: 'europe-west1-docker.pkg.dev/$PROJECT_ID/tools/friendly-cicd-helper'
     entrypoint: sh
@@ -67,6 +67,9 @@ availableSecrets:
   secretManager:
   - versionName: projects/$PROJECT_ID/secrets/friendly-cicd-helper_gitlab/versions/1
     env: 'GITLAB_TOKEN'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
 
 substitutions:
   _GITLAB_PROJECT: galloro/genai-sw-delivery
