@@ -10,7 +10,7 @@ steps:
         cat /workspace/diff.txt
 
   - id: Get the MR ID
-    name: 'europe-west1-docker.pkg.dev/$PROJECT_ID/tools/friendly-cicd-helper'
+    name: 'gcr.io/just-ratio-467615-s1/friendly-cicd-helper:latest'
     entrypoint: sh
     args:
     - -c
@@ -20,7 +20,7 @@ steps:
     secretEnv: ['GITLAB_TOKEN']
 
   - id: Using Vertex AI to provide an automated MR Review
-    name: 'europe-west1-docker.pkg.dev/$PROJECT_ID/tools/friendly-cicd-helper'
+    name: 'gcr.io/just-ratio-467615-s1/friendly-cicd-helper:latest'
     entrypoint: sh
     args:
     - -c
@@ -35,7 +35,7 @@ steps:
     secretEnv: ['GITLAB_TOKEN']
 
   - id: Using Vertex AI to provide automated Release Notes
-    name: 'europe-west1-docker.pkg.dev/$PROJECT_ID/tools/friendly-cicd-helper'
+    name: 'gcr.io/just-ratio-467615-s1/friendly-cicd-helper:latest'
     entrypoint: sh
     args:
     - -c
