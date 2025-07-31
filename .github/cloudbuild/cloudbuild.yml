@@ -17,7 +17,7 @@ steps:
     - |
       MERGE_REQUEST_IID=$$(friendly-cicd-helper gitlab-mergerequest --project $_GITLAB_PROJECT --source $_HEAD_BRANCH)
       echo "$$MERGE_REQUEST_IID" > /workspace/gitlab_merge_request_iid
-    secretEnv: ['GITLAB_TOKEN']
+    secretEnv: ['GITHUB_TOKEN']
 
   - id: Using Vertex AI to provide an automated MR Review
     name: 'gcr.io/just-ratio-467615-s1/friendly-cicd-helper:latest'
@@ -32,7 +32,7 @@ steps:
       friendly-cicd-helper vertex-code-review --diff /workspace/diff.txt | tee -a mergerequest-review.md
 
       cat mergerequest-review.md | friendly-cicd-helper gitlab-comment --project $_GITLAB_PROJECT --mergerequest $$(cat /workspace/gitlab_merge_request_iid)
-    secretEnv: ['GITLAB_TOKEN']
+    secretEnv: ['GITHUB_TOKEN']
 
   - id: Using Vertex AI to provide automated Release Notes
     name: 'gcr.io/just-ratio-467615-s1/friendly-cicd-helper:latest'
@@ -46,7 +46,7 @@ steps:
       friendly-cicd-helper vertex-release-notes --diff /workspace/diff.txt | tee -a mergerequest-release-notes.md
 
       cat mergerequest-release-notes.md | friendly-cicd-helper gitlab-comment --project $_GITLAB_PROJECT --mergerequest $$(cat /workspace/gitlab_merge_request_iid)
-    secretEnv: ['GITLAB_TOKEN']
+    secretEnv: ['GITHUB_TOKEN']
   - id: Build the image with Skaffold
     name: gcr.io/k8s-skaffold/skaffold
     entrypoint: /bin/bash
@@ -66,7 +66,7 @@ steps:
 availableSecrets:
   secretManager:
   - versionName: projects/$PROJECT_ID/secrets/friendly-cicd-helper_gitlab/versions/1
-    env: 'GITLAB_TOKEN'
+    env: 'GITHUB_TOKEN'
 
 options:
   logging: CLOUD_LOGGING_ONLY
